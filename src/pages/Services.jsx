@@ -87,8 +87,8 @@ export default function Services() {
               <tr>
                 <th>Service Name</th>
                 <th>Price</th>
-                <th>Duration</th>
-                <th>Description</th>
+                <th className="hide-mobile">Duration</th>
+                <th className="hide-mobile">Description</th>
                 <th></th>
               </tr>
             </thead>
@@ -103,8 +103,8 @@ export default function Services() {
                   <td>
                     <span style={{ fontWeight: 700, color: 'var(--primary-dark)', fontSize: 14 }}>€{Number(s.price).toFixed(2)}</span>
                   </td>
-                  <td>{s.duration ? `${s.duration} min` : '—'}</td>
-                  <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>
+                  <td className="hide-mobile">{s.duration ? `${s.duration} min` : '—'}</td>
+                  <td className="hide-mobile" style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>
                     {s.description || '—'}
                   </td>
                   <td>

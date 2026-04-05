@@ -98,9 +98,9 @@ export default function Customers() {
               <tr>
                 <th>Name</th>
                 <th>Phone</th>
-                <th>Email</th>
-                <th>Notes</th>
-                <th>Added</th>
+                <th className="hide-mobile">Email</th>
+                <th className="hide-mobile">Notes</th>
+                <th className="hide-mobile">Added</th>
                 <th></th>
               </tr>
             </thead>
@@ -120,9 +120,9 @@ export default function Customers() {
                     </button>
                   </td>
                   <td>{c.phone || '—'}</td>
-                  <td>{c.email || '—'}</td>
-                  <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.notes || '—'}</td>
-                  <td>{new Date(c.created_at).toLocaleDateString('en-GB')}</td>
+                  <td className="hide-mobile">{c.email || '—'}</td>
+                  <td className="hide-mobile" style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.notes || '—'}</td>
+                  <td className="hide-mobile">{new Date(c.created_at).toLocaleDateString('en-GB')}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button className="btn btn-secondary btn-sm" onClick={() => openEdit(c)}>Edit</button>

@@ -143,7 +143,7 @@ export default function Expenses() {
               <tr>
                 <th>Date</th>
                 <th>Category</th>
-                <th>Description</th>
+                <th className="hide-mobile">Description</th>
                 <th>Amount</th>
                 <th></th>
               </tr>
@@ -161,7 +161,7 @@ export default function Expenses() {
                       {e.category}
                     </span>
                   </td>
-                  <td style={{ color: 'var(--text-muted)' }}>{e.description || '—'}</td>
+                  <td className="hide-mobile" style={{ color: 'var(--text-muted)' }}>{e.description || '—'}</td>
                   <td style={{ fontWeight: 700, color: 'var(--danger)' }}>€{Number(e.amount).toFixed(2)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>

@@ -216,6 +216,9 @@ tbody tr:hover td { background: #fafafa; }
 
 /* ── Mobile (≤ 768px) ── */
 @media (max-width: 768px) {
+  /* Prevent any horizontal overflow */
+  html, body, #root { overflow-x: hidden; max-width: 100vw; }
+
   /* Mobile header */
   .mobile-header {
     display: flex;
@@ -226,6 +229,7 @@ tbody tr:hover td { background: #fafafa; }
     position: sticky;
     top: 0;
     z-index: 90;
+    width: 100%;
   }
   .mobile-title { color: white; font-size: 17px; font-weight: 700; }
   .mobile-title span { color: var(--primary); }
@@ -254,48 +258,61 @@ tbody tr:hover td { background: #fafafa; }
   }
 
   /* Main content */
-  .main-content { margin-left: 0; padding: 16px; }
+  .main-content { margin-left: 0; padding: 12px; width: 100%; }
 
   /* Stats */
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .stat-card { padding: 14px; }
-  .stat-card .stat-value { font-size: 20px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+  .stat-card { padding: 12px; }
+  .stat-card .stat-icon { font-size: 18px; margin-bottom: 6px; }
+  .stat-card .stat-value { font-size: 18px; }
+  .stat-card .stat-label { font-size: 10px; }
+  .stat-card .stat-sub { font-size: 10px; }
 
   /* Cards */
-  .card { padding: 16px; }
+  .card { padding: 14px; border-radius: 10px; }
+  .card-header { margin-bottom: 14px; }
 
-  /* Tables — scroll horizontally */
-  .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { min-width: 500px; }
-  td, th { padding: 10px 12px; }
+  /* Tables — hide less important columns, no min-width */
+  .table-container { overflow-x: hidden; width: 100%; }
+  table { width: 100%; min-width: unset; table-layout: fixed; }
+  td, th { padding: 8px 6px; font-size: 12px; word-break: break-word; }
+  .hide-mobile { display: none !important; }
 
   /* Page header */
-  .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+  .page-header h1 { font-size: 18px; }
 
   /* Toolbar */
-  .toolbar { flex-direction: column; align-items: stretch; }
-  .search-input { max-width: 100%; }
+  .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .search-input { max-width: 100%; width: 100%; }
 
-  /* Modals */
+  /* Modals — slide up from bottom */
   .modal-overlay { padding: 0; align-items: flex-end; }
   .modal {
     border-radius: 20px 20px 0 0;
     max-height: 92vh;
-    padding: 24px 20px;
+    padding: 24px 16px;
     max-width: 100%;
+    width: 100%;
   }
   .modal-lg { max-width: 100%; }
-  .form-grid-2 { grid-template-columns: 1fr; }
+  .form-grid-2 { grid-template-columns: 1fr; gap: 0; }
 
-  /* Calendar */
-  .calendar-day { min-height: 60px; padding: 4px; }
-  .calendar-day .day-number { font-size: 11px; }
-  .calendar-day .apt-chip { font-size: 9px; padding: 1px 3px; }
-  .calendar-day-name { font-size: 9px; padding: 6px 2px; }
+  /* Calendar — compact */
+  .calendar-header h3 { font-size: 13px; min-width: unset; }
+  .calendar-day { min-height: 52px; padding: 3px; }
+  .calendar-day .day-number { font-size: 11px; margin-bottom: 2px; }
+  .calendar-day .apt-chip { font-size: 9px; padding: 1px 2px; margin-bottom: 1px; }
+  .calendar-day-name { font-size: 9px; padding: 5px 2px; }
 
   /* Two col */
   .two-col { grid-template-columns: 1fr; }
 
   /* Buttons */
-  .btn { font-size: 12px; padding: 7px 12px; }
+  .btn { font-size: 12px; padding: 7px 10px; }
+  .btn-sm { padding: 4px 8px; font-size: 11px; }
+
+  /* Report bars */
+  .report-bar-label { width: 90px; font-size: 11px; }
+  .report-bar-value { width: 55px; font-size: 11px; }
 }

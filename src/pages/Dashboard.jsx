@@ -124,9 +124,9 @@ export default function Dashboard() {
             <thead>
               <tr>
                 <th>Customer</th>
-                <th>Service</th>
+                <th className="hide-mobile">Service</th>
                 <th>Date</th>
-                <th>Time</th>
+                <th className="hide-mobile">Time</th>
                 <th>Status</th>
                 <th>Price</th>
                 <th></th>
@@ -138,15 +138,15 @@ export default function Dashboard() {
               ) : recent.map(apt => (
                 <tr key={apt.id}>
                   <td>{apt.customers?.name || '—'}</td>
-                  <td>{apt.services?.name || '—'}</td>
+                  <td className="hide-mobile">{apt.services?.name || '—'}</td>
                   <td>{apt.date}</td>
-                  <td>{apt.time?.slice(0, 5)}</td>
+                  <td className="hide-mobile">{apt.time?.slice(0, 5)}</td>
                   <td>{statusBadge(apt.status)}</td>
                   <td>€{Number(apt.price || 0).toFixed(2)}</td>
                   <td>
                     {apt.status === 'scheduled' && (
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-success btn-sm" onClick={() => updateStatus(apt.id, 'completed')}>✓ Done</button>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn btn-success btn-sm" onClick={() => updateStatus(apt.id, 'completed')}>✓</button>
                         <button className="btn btn-danger btn-sm" onClick={() => updateStatus(apt.id, 'cancelled')}>✕</button>
                       </div>
                     )}
