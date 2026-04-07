@@ -27,7 +27,7 @@ export default function Reports() {
       { data: newCustomers }
     ] = await Promise.all([
       supabase.from('appointments')
-        .select('id, date, price, status, services(name)')
+        .select('id, date, price, status, service:service_id(name)')
         .gte('date', start).lte('date', end),
       supabase.from('expenses')
         .select('id, amount, category')
@@ -49,7 +49,7 @@ export default function Reports() {
     // Top services
     const serviceMap = {}
     completed.forEach(a => {
-      const name = a.services?.name || 'Unknown'
+      const name = a.service?.name || 'Unknown'
       if (!serviceMap[name]) serviceMap[name] = { count: 0, revenue: 0 }
       serviceMap[name].count++
       serviceMap[name].revenue += Number(a.price || 0)

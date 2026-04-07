@@ -29,7 +29,7 @@ export default function Dashboard() {
       supabase.from('appointments').select('price').gte('date', monthStart).lte('date', monthEnd).eq('status', 'completed'),
       supabase.from('expenses').select('amount').gte('date', monthStart).lte('date', monthEnd),
       supabase.from('appointments')
-        .select('id, date, time, status, price, customers(name), services(name)')
+        .select('id, date, time, status, price, customers(name), service:service_id(name)')
         .order('date', { ascending: false })
         .order('time', { ascending: false })
         .limit(8)
@@ -138,7 +138,7 @@ export default function Dashboard() {
               ) : recent.map(apt => (
                 <tr key={apt.id}>
                   <td>{apt.customers?.name || '—'}</td>
-                  <td className="hide-mobile">{apt.services?.name || '—'}</td>
+                  <td className="hide-mobile">{apt.service?.name || '—'}</td>
                   <td>{apt.date}</td>
                   <td className="hide-mobile">{apt.time?.slice(0, 5)}</td>
                   <td>{statusBadge(apt.status)}</td>

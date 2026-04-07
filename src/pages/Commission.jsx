@@ -55,7 +55,7 @@ export default function Commission() {
     const end = `${year}-${mon}-${lastDay}`
     const { data } = await supabase
       .from('appointments')
-      .select('id, date, time, price, status, customers(name), services(name)')
+      .select('id, date, time, price, status, customers(name), service:service_id(name)')
       .gte('date', start)
       .lte('date', end)
       .eq('status', 'completed')
@@ -215,7 +215,7 @@ export default function Commission() {
                         <td>{a.date}</td>
                         <td>{a.time?.slice(0, 5)}</td>
                         <td>{a.customers?.name || '—'}</td>
-                        <td>{a.services?.name || '—'}</td>
+                        <td>{a.service?.name || '—'}</td>
                         <td style={{ fontWeight: 600 }}>€{price.toFixed(2)}</td>
                         <td style={{ color: 'var(--danger)', fontWeight: 600 }}>€{ownerCut.toFixed(2)}</td>
                         <td style={{ color: 'var(--success)', fontWeight: 600 }}>€{myCut.toFixed(2)}</td>

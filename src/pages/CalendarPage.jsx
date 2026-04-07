@@ -97,7 +97,7 @@ export default function CalendarPage() {
     const end = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`
     const { data, error } = await supabase
       .from('appointments')
-      .select('id, date, time, status, price, notes, customer_id, service_id, staff_id, customers(name), services(name, price), staff(name)')
+      .select('id, date, time, status, price, price2, notes, customer_id, service_id, service2_id, staff_id, customers(name), service:service_id(name, price), service2:service2_id(name, price), staff(name)')
       .gte('date', start).lte('date', end).order('time')
     if (error) alert('Fetch error: ' + error.message)
     setAppointments(data || [])
@@ -213,7 +213,7 @@ export default function CalendarPage() {
   }
 
   const aptTotal = (a) => (Number(a.price || 0) + Number(a.price2 || 0)).toFixed(2)
-  const aptServices = (a) => [a.services?.name, a.service2_id ? '+ 2nd' : null].filter(Boolean).join(', ')
+  const aptServices = (a) => [a.service?.name, a.service2?.name].filter(Boolean).join(' + ')
 
   const dayApts = selectedDay ? (aptsByDay[selectedDay] || []) : []
 
