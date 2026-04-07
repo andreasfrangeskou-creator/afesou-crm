@@ -27,7 +27,7 @@ export default function Reports() {
       { data: newCustomers }
     ] = await Promise.all([
       supabase.from('appointments')
-        .select('id, date, price, status, services(name)')
+        .select('id, date, price, price2, status, services(name)')
         .gte('date', start).lte('date', end),
       supabase.from('expenses')
         .select('id, amount, category')
@@ -41,7 +41,7 @@ export default function Reports() {
     const completed = (appointments || []).filter(a => a.status === 'completed')
     const cancelled = (appointments || []).filter(a => a.status === 'cancelled')
 
-    const revenue = completed.reduce((s, a) => s + Number(a.price || 0), 0)
+    const revenue = completed.reduce((s, a) => s + Number(a.price || 0) + Number(a.price2 || 0), 0)
     const totalExpenses = (expenses || []).reduce((s, e) => s + Number(e.amount || 0), 0)
     const commissionOwed = revenue * commissionRate / 100
     const netProfit = revenue - totalExpenses - commissionOwed

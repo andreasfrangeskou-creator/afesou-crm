@@ -1,8 +1,68 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const EMPTY_FORM = { customer_id: '', service_id: '', staff_id: '', date: '', time: '', status: 'scheduled', notes: '', price: '' }
+const EMPTY_FORM = {
+  customer_id: '', customer_name: '',
+  service_id: '', service2_id: '',
+  staff_id: '', date: '', time: '',
+  status: 'scheduled', notes: '', price: '', price2: ''
+}
+
+function CustomerSearch({ customers, value, onChange }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  // When value changes externally (edit mode), sync display name
+  useEffect(() => {
+    if (value) {
+      const c = customers.find(c => c.id === value)
+      if (c) setQuery(c.name)
+    } else {
+      setQuery('')
+    }
+  }, [value, customers])
+
+  useEffect(() => {
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const filtered = customers.filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <input
+        value={query}
+        onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange('', '') }}
+        onFocus={() => setOpen(true)}
+        placeholder="Type to search customer..."
+        style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', fontFamily: 'inherit' }}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, background: 'white',
+          border: '1px solid var(--border)', borderRadius: 8, zIndex: 500,
+          maxHeight: 200, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginTop: 2
+        }}>
+          {filtered.map(c => (
+            <div
+              key={c.id}
+              onClick={() => { onChange(c.id, c.name); setQuery(c.name); setOpen(false) }}
+              style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--border)' }}
+              onMouseEnter={e => e.target.style.background = 'var(--primary-light)'}
+              onMouseLeave={e => e.target.style.background = 'white'}
+            >
+              {c.name}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function CalendarPage() {
   const [year, setYear] = useState(new Date().getFullYear())
@@ -11,7 +71,7 @@ export default function CalendarPage() {
   const [customers, setCustomers] = useState([])
   const [services, setServices] = useState([])
   const [staff, setStaff] = useState([])
-  const [modal, setModal] = useState(null) // null | 'add' | 'edit' | 'day'
+  const [modal, setModal] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [selectedDay, setSelectedDay] = useState(null)
   const [selectedApt, setSelectedApt] = useState(null)
@@ -37,26 +97,19 @@ export default function CalendarPage() {
     const end = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`
     const { data } = await supabase
       .from('appointments')
-      .select('id, date, time, status, price, notes, customer_id, service_id, staff_id, customers(name), services(name, price), staff(name)')
-      .gte('date', start)
-      .lte('date', end)
-      .order('time')
+      .select('id, date, time, status, price, price2, notes, customer_id, service_id, service2_id, staff_id, customers(name), services(name, price), staff(name)')
+      .gte('date', start).lte('date', end).order('time')
     setAppointments(data || [])
   }
 
   function prevMonth() {
-    if (month === 0) { setYear(y => y - 1); setMonth(11) }
-    else setMonth(m => m - 1)
+    if (month === 0) { setYear(y => y - 1); setMonth(11) } else setMonth(m => m - 1)
   }
   function nextMonth() {
-    if (month === 11) { setYear(y => y + 1); setMonth(0) }
-    else setMonth(m => m + 1)
+    if (month === 11) { setYear(y => y + 1); setMonth(0) } else setMonth(m => m + 1)
   }
 
-  function openDay(day) {
-    setSelectedDay(day)
-    setModal('day')
-  }
+  function openDay(day) { setSelectedDay(day); setModal('day') }
 
   function openAdd(day) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -66,23 +119,34 @@ export default function CalendarPage() {
 
   function openEdit(apt) {
     setSelectedApt(apt)
+    const cust = customers.find(c => c.id === apt.customer_id)
     setForm({
       customer_id: apt.customer_id || '',
+      customer_name: cust?.name || '',
       service_id: apt.service_id || '',
+      service2_id: apt.service2_id || '',
       staff_id: apt.staff_id || '',
       date: apt.date,
       time: apt.time?.slice(0, 5) || '',
       status: apt.status,
       notes: apt.notes || '',
-      price: apt.price || ''
+      price: apt.price || '',
+      price2: apt.price2 || ''
     })
     setModal('edit')
   }
 
-  function handleServiceChange(id) {
+  function handleService1Change(id) {
     const svc = services.find(s => s.id === id)
     setForm(f => ({ ...f, service_id: id, price: svc ? String(svc.price) : f.price }))
   }
+
+  function handleService2Change(id) {
+    const svc = services.find(s => s.id === id)
+    setForm(f => ({ ...f, service2_id: id, price2: svc ? String(svc.price) : f.price2 }))
+  }
+
+  const totalPrice = (Number(form.price) || 0) + (Number(form.price2) || 0)
 
   async function save() {
     if (!form.customer_id || !form.date || !form.time) return
@@ -90,12 +154,14 @@ export default function CalendarPage() {
     const payload = {
       customer_id: form.customer_id,
       service_id: form.service_id || null,
+      service2_id: form.service2_id || null,
       staff_id: form.staff_id || null,
       date: form.date,
       time: form.time,
       status: form.status,
-      notes: form.notes,
-      price: form.price ? Number(form.price) : null
+      notes: form.notes || null,
+      price: form.price ? Number(form.price) : null,
+      price2: form.price2 ? Number(form.price2) : null,
     }
     if (modal === 'add') {
       const { error } = await supabase.from('appointments').insert([payload])
@@ -145,6 +211,9 @@ export default function CalendarPage() {
     return <span className="badge badge-info">Scheduled</span>
   }
 
+  const aptTotal = (a) => (Number(a.price || 0) + Number(a.price2 || 0)).toFixed(2)
+  const aptServices = (a) => [a.services?.name, a.service2_id ? '+ 2nd' : null].filter(Boolean).join(', ')
+
   const dayApts = selectedDay ? (aptsByDay[selectedDay] || []) : []
 
   return (
@@ -165,7 +234,6 @@ export default function CalendarPage() {
           <h3>{monthName}</h3>
           <button className="btn btn-secondary btn-sm" onClick={nextMonth}>Next ›</button>
         </div>
-
         <div className="calendar-grid">
           {DAYS.map(d => <div key={d} className="calendar-day-name">{d}</div>)}
           {cells.map((day, i) => {
@@ -181,9 +249,7 @@ export default function CalendarPage() {
                     {a.time?.slice(0, 5)} {a.customers?.name?.split(' ')[0]}
                   </span>
                 ))}
-                {dayAptList.length > 3 && (
-                  <span className="apt-chip more">+{dayAptList.length - 3} more</span>
-                )}
+                {dayAptList.length > 3 && <span className="apt-chip more">+{dayAptList.length - 3} more</span>}
               </div>
             )
           })}
@@ -198,7 +264,7 @@ export default function CalendarPage() {
               <h2 style={{ marginBottom: 0 }}>
                 {selectedDay} {new Date(year, month).toLocaleString('default', { month: 'long' })} {year}
               </h2>
-              <button className="btn btn-primary btn-sm" onClick={() => { openAdd(selectedDay); }}>+ Add</button>
+              <button className="btn btn-primary btn-sm" onClick={() => openAdd(selectedDay)}>+ Add</button>
             </div>
             {dayApts.length === 0 ? (
               <div className="empty-state"><div className="empty-icon">📅</div><p>No appointments this day</p></div>
@@ -206,27 +272,26 @@ export default function CalendarPage() {
               <div className="table-container">
                 <table>
                   <thead>
-                    <tr><th>Time</th><th>Customer</th><th>Service</th><th>Staff</th><th>Status</th><th>Price</th><th></th></tr>
+                    <tr><th>Time</th><th>Customer</th><th>Service(s)</th><th>Status</th><th>Total</th><th></th></tr>
                   </thead>
                   <tbody>
                     {dayApts.map(a => (
                       <tr key={a.id}>
                         <td>{a.time?.slice(0, 5)}</td>
                         <td>{a.customers?.name || '—'}</td>
-                        <td>{a.services?.name || '—'}</td>
-                        <td>{a.staff?.name || '—'}</td>
+                        <td>{aptServices(a)}</td>
                         <td>{statusBadge(a.status)}</td>
-                        <td>€{Number(a.price || 0).toFixed(2)}</td>
+                        <td>€{aptTotal(a)}</td>
                         <td>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                             {a.status === 'scheduled' && (
                               <>
-                                <button className="btn btn-success btn-sm" onClick={() => updateStatus(a.id, 'completed')}>✓ Done</button>
-                                <button className="btn btn-danger btn-sm" onClick={() => updateStatus(a.id, 'cancelled')}>✕ Cancel</button>
+                                <button className="btn btn-success btn-sm" onClick={() => updateStatus(a.id, 'completed')}>✓</button>
+                                <button className="btn btn-danger btn-sm" onClick={() => updateStatus(a.id, 'cancelled')}>✕</button>
                               </>
                             )}
                             <button className="btn btn-secondary btn-sm" onClick={() => openEdit(a)}>Edit</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => remove(a.id)}>Delete</button>
+                            <button className="btn btn-danger btn-sm" onClick={() => remove(a.id)}>Del</button>
                           </div>
                         </td>
                       </tr>
@@ -250,25 +315,70 @@ export default function CalendarPage() {
 
             <div className="form-group">
               <label>Customer *</label>
-              <select value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })}>
-                <option value="">Select customer...</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <CustomerSearch
+                customers={customers}
+                value={form.customer_id}
+                onChange={(id, name) => setForm(f => ({ ...f, customer_id: id, customer_name: name }))}
+              />
             </div>
 
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label>Service</label>
-                <select value={form.service_id} onChange={e => handleServiceChange(e.target.value)}>
-                  <option value="">Select service...</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name} — €{s.price}</option>)}
-                </select>
+            {/* Session 1 */}
+            <div style={{ background: 'var(--bg)', borderRadius: 8, padding: '12px', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session 1</div>
+              <div className="form-grid-2">
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Service</label>
+                  <select value={form.service_id} onChange={e => handleService1Change(e.target.value)}>
+                    <option value="">Select service...</option>
+                    {services.map(s => <option key={s.id} value={s.id}>{s.name} — €{s.price}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Price (€)</label>
+                  <input type="number" step="0.01" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" />
+                </div>
               </div>
+            </div>
+
+            {/* Session 2 */}
+            <div style={{ background: '#fdf2f8', borderRadius: 8, padding: '12px', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session 2 (optional)</div>
+              <div className="form-grid-2">
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Service</label>
+                  <select value={form.service2_id} onChange={e => handleService2Change(e.target.value)}>
+                    <option value="">None</option>
+                    {services.map(s => <option key={s.id} value={s.id}>{s.name} — €{s.price}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Price (€)</label>
+                  <input type="number" step="0.01" value={form.price2} onChange={e => setForm({ ...form, price2: e.target.value })} placeholder="0.00" disabled={!form.service2_id} />
+                </div>
+              </div>
+            </div>
+
+            {/* Total */}
+            {(Number(form.price) > 0 || Number(form.price2) > 0) && (
+              <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, color: 'var(--primary-dark)', marginBottom: 12 }}>
+                Total: €{totalPrice.toFixed(2)}
+              </div>
+            )}
+
+            <div className="form-grid-2">
               <div className="form-group">
                 <label>Staff</label>
                 <select value={form.staff_id} onChange={e => setForm({ ...form, staff_id: e.target.value })}>
                   <option value="">Select staff...</option>
                   {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Status</label>
+                <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </div>
@@ -284,21 +394,6 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label>Price (€)</label>
-                <input type="number" step="0.01" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" />
-              </div>
-              <div className="form-group">
-                <label>Status</label>
-                <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-
             <div className="form-group">
               <label>Notes</label>
               <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Any notes..." />
@@ -309,7 +404,7 @@ export default function CalendarPage() {
               {modal === 'edit' && (
                 <button className="btn btn-danger" onClick={() => remove(selectedApt.id)}>Delete</button>
               )}
-              <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+              <button className="btn btn-primary" onClick={save} disabled={saving || !form.customer_id}>{saving ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         </div>
