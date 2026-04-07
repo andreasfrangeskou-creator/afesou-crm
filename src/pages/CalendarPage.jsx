@@ -95,10 +95,11 @@ export default function CalendarPage() {
     const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
     const lastDay = new Date(year, month + 1, 0).getDate()
     const end = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('appointments')
       .select('id, date, time, status, price, notes, customer_id, service_id, staff_id, customers(name), services(name, price), staff(name)')
       .gte('date', start).lte('date', end).order('time')
+    if (error) alert('Fetch error: ' + error.message)
     setAppointments(data || [])
   }
 
