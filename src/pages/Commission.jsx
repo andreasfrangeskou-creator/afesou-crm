@@ -55,7 +55,7 @@ export default function Commission() {
     const end = `${year}-${mon}-${lastDay}`
     const { data } = await supabase
       .from('appointments')
-      .select('id, date, time, price, price2, status, customers(name), services(name)')
+      .select('id, date, time, price, status, customers(name), services(name)')
       .gte('date', start)
       .lte('date', end)
       .eq('status', 'completed')
@@ -207,7 +207,7 @@ export default function Commission() {
                 </thead>
                 <tbody>
                   {appointments.map(a => {
-                    const price = Number(a.price || 0) + Number(a.price2 || 0)
+                    const price = Number(a.price || 0)
                     const ownerCut = price * rate / 100
                     const myCut = price - ownerCut
                     return (

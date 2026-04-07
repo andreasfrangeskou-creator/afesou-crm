@@ -26,7 +26,7 @@ export default function Dashboard() {
     ] = await Promise.all([
       supabase.from('customers').select('*', { count: 'exact', head: true }),
       supabase.from('appointments').select('id').eq('date', today),
-      supabase.from('appointments').select('price, price2').gte('date', monthStart).lte('date', monthEnd).eq('status', 'completed'),
+      supabase.from('appointments').select('price').gte('date', monthStart).lte('date', monthEnd).eq('status', 'completed'),
       supabase.from('expenses').select('amount').gte('date', monthStart).lte('date', monthEnd),
       supabase.from('appointments')
         .select('id, date, time, status, price, customers(name), services(name)')
@@ -35,7 +35,7 @@ export default function Dashboard() {
         .limit(8)
     ])
 
-    const revenue = monthApts?.reduce((s, a) => s + (Number(a.price) || 0) + (Number(a.price2) || 0), 0) || 0
+    const revenue = monthApts?.reduce((s, a) => s + (Number(a.price) || 0), 0) || 0
     const expenses = monthExp?.reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0
 
     setStats({ customers: customers || 0, todayApts: todayApts?.length || 0, revenue, expenses })
