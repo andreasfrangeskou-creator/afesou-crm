@@ -226,6 +226,7 @@ export default function CalendarPage() {
                               </>
                             )}
                             <button className="btn btn-secondary btn-sm" onClick={() => openEdit(a)}>Edit</button>
+                            <button className="btn btn-danger btn-sm" onClick={() => remove(a.id)}>Delete</button>
                           </div>
                         </td>
                       </tr>

@@ -144,12 +144,15 @@ export default function Dashboard() {
                   <td>{statusBadge(apt.status)}</td>
                   <td>€{Number(apt.price || 0).toFixed(2)}</td>
                   <td>
-                    {apt.status === 'scheduled' && (
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn btn-success btn-sm" onClick={() => updateStatus(apt.id, 'completed')}>✓</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => updateStatus(apt.id, 'cancelled')}>✕</button>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {apt.status === 'scheduled' && (
+                        <>
+                          <button className="btn btn-success btn-sm" onClick={() => updateStatus(apt.id, 'completed')}>✓</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => updateStatus(apt.id, 'cancelled')}>✕</button>
+                        </>
+                      )}
+                      <button className="btn btn-danger btn-sm" onClick={async () => { if (!confirm('Delete this appointment?')) return; await supabase.from('appointments').delete().eq('id', apt.id); fetchData() }}>🗑</button>
+                    </div>
                   </td>
                 </tr>
               ))}
