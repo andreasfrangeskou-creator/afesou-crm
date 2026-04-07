@@ -95,18 +95,10 @@ export default function CalendarPage() {
     const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
     const lastDay = new Date(year, month + 1, 0).getDate()
     const end = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`
-    let { data, error } = await supabase
+    const { data } = await supabase
       .from('appointments')
-      .select('id, date, time, status, price, price2, notes, customer_id, service_id, service2_id, staff_id, customers(name), services(name, price), staff(name)')
+      .select('id, date, time, status, price, notes, customer_id, service_id, staff_id, customers(name), services(name, price), staff(name)')
       .gte('date', start).lte('date', end).order('time')
-    if (error) {
-      // Fallback: fetch without new columns if schema cache hasn't updated yet
-      const fallback = await supabase
-        .from('appointments')
-        .select('id, date, time, status, price, notes, customer_id, service_id, staff_id, customers(name), services(name, price), staff(name)')
-        .gte('date', start).lte('date', end).order('time')
-      data = fallback.data
-    }
     setAppointments(data || [])
   }
 
