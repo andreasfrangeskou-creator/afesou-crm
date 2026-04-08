@@ -25,7 +25,7 @@ export default function Customers() {
     setSelected(c)
     const { data } = await supabase
       .from('appointments')
-      .select('id, date, time, status, price, services(name), staff(name)')
+      .select('id, date, time, status, price, service:service_id(name), staff(name)')
       .eq('customer_id', c.id)
       .order('date', { ascending: false })
     setHistory(data || [])
@@ -196,7 +196,7 @@ export default function Customers() {
                     <tr key={a.id}>
                       <td>{a.date}</td>
                       <td>{a.time?.slice(0, 5)}</td>
-                      <td>{a.services?.name || '—'}</td>
+                      <td>{a.service?.name || '—'}</td>
                       <td>{a.staff?.name || '—'}</td>
                       <td>{statusBadge(a.status)}</td>
                       <td>€{Number(a.price || 0).toFixed(2)}</td>
