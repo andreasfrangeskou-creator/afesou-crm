@@ -6,7 +6,7 @@ const EMPTY_FORM = {
   customer_id: '', customer_name: '',
   service_id: '', service2_id: '',
   staff_id: '', date: '', time: '',
-  status: 'scheduled', notes: '', price: '', price2: ''
+  status: 'scheduled', notes: '', price: ''
 }
 
 function CustomerSearch({ customers, value, onChange }) {
@@ -131,23 +131,24 @@ export default function CalendarPage() {
       time: apt.time?.slice(0, 5) || '',
       status: apt.status,
       notes: apt.notes || '',
-      price: apt.price || '',
-      price2: apt.price2 || ''
+      price: apt.price || ''
     })
     setModal('edit')
   }
 
   function handleService1Change(id) {
     const svc = services.find(s => s.id === id)
-    setForm(f => ({ ...f, service_id: id, price: svc ? String(svc.price) : f.price }))
+    const svc2 = services.find(s => s.id === form.service2_id)
+    const autoPrice = (Number(svc?.price) || 0) + (Number(svc2?.price) || 0)
+    setForm(f => ({ ...f, service_id: id, price: String(autoPrice || f.price) }))
   }
 
   function handleService2Change(id) {
-    const svc = services.find(s => s.id === id)
-    setForm(f => ({ ...f, service2_id: id, price2: svc ? String(svc.price) : f.price2 }))
+    const svc = services.find(s => s.id === form.service_id)
+    const svc2 = services.find(s => s.id === id)
+    const autoPrice = (Number(svc?.price) || 0) + (Number(svc2?.price) || 0)
+    setForm(f => ({ ...f, service2_id: id, price: id ? String(autoPrice) : String(Number(svc?.price) || f.price) }))
   }
-
-  const totalPrice = (Number(form.price) || 0) + (Number(form.price2) || 0)
 
   async function save() {
     if (!form.customer_id || !form.date || !form.time) return
@@ -162,7 +163,6 @@ export default function CalendarPage() {
       status: form.status,
       notes: form.notes || null,
       price: form.price ? Number(form.price) : null,
-      price2: form.price2 ? Number(form.price2) : null,
     }
     if (modal === 'add') {
       const { error } = await supabase.from('appointments').insert([payload])
@@ -212,7 +212,7 @@ export default function CalendarPage() {
     return <span className="badge badge-info">Scheduled</span>
   }
 
-  const aptTotal = (a) => (Number(a.price || 0) + Number(a.price2 || 0)).toFixed(2)
+  const aptTotal = (a) => Number(a.price || 0).toFixed(2)
   const aptServices = (a) => [a.service?.name, a.service2?.name].filter(Boolean).join(' + ')
 
   const dayApts = selectedDay ? (aptsByDay[selectedDay] || []) : []
@@ -323,48 +323,39 @@ export default function CalendarPage() {
               />
             </div>
 
-            {/* Session 1 */}
-            <div style={{ background: 'var(--bg)', borderRadius: 8, padding: '12px', marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session 1</div>
-              <div className="form-grid-2">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Service</label>
-                  <select value={form.service_id} onChange={e => handleService1Change(e.target.value)}>
-                    <option value="">Select service...</option>
-                    {services.map(s => <option key={s.id} value={s.id}>{s.name} — €{s.price}</option>)}
-                  </select>
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Price (€)</label>
-                  <input type="number" step="0.01" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" />
-                </div>
+            <div className="form-grid-2">
+              <div className="form-group">
+                <label>Service 1</label>
+                <select value={form.service_id} onChange={e => handleService1Change(e.target.value)}>
+                  <option value="">Select service...</option>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.name} — €{s.price}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Service 2 (optional)</label>
+                <select value={form.service2_id} onChange={e => handleService2Change(e.target.value)}>
+                  <option value="">None</option>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.name} — €{s.price}</option>)}
+                </select>
               </div>
             </div>
 
-            {/* Session 2 */}
-            <div style={{ background: '#fdf2f8', borderRadius: 8, padding: '12px', marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session 2 (optional)</div>
-              <div className="form-grid-2">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Service</label>
-                  <select value={form.service2_id} onChange={e => handleService2Change(e.target.value)}>
-                    <option value="">None</option>
-                    {services.map(s => <option key={s.id} value={s.id}>{s.name} — €{s.price}</option>)}
-                  </select>
+            <div className="form-group">
+              <label>Final Price (€) — auto-filled, editable</label>
+              <input
+                type="number"
+                step="0.01"
+                value={form.price}
+                onChange={e => setForm({ ...form, price: e.target.value })}
+                placeholder="0.00"
+                style={{ fontSize: 16, fontWeight: 700, color: 'var(--primary-dark)' }}
+              />
+              {form.service_id && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                  Auto-filled from services. You can edit for packages or discounts.
                 </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label>Price (€)</label>
-                  <input type="number" step="0.01" value={form.price2} onChange={e => setForm({ ...form, price2: e.target.value })} placeholder="0.00" disabled={!form.service2_id} />
-                </div>
-              </div>
+              )}
             </div>
-
-            {/* Total */}
-            {(Number(form.price) > 0 || Number(form.price2) > 0) && (
-              <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, color: 'var(--primary-dark)', marginBottom: 12 }}>
-                Total: €{totalPrice.toFixed(2)}
-              </div>
-            )}
 
             <div className="form-grid-2">
               <div className="form-group">
