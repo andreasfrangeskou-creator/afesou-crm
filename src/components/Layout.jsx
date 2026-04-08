@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
+import { supabase } from '../supabase'
 
 const navItems = [
   { path: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -11,8 +12,12 @@ const navItems = [
   { path: 'reports', label: 'Reports', icon: '📈' },
 ]
 
-export default function Layout() {
+export default function Layout({ session }) {
   const [open, setOpen] = useState(false)
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+  }
 
   return (
     <div className="layout">
@@ -42,6 +47,18 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        <div style={{ padding: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 'auto' }}>
+          <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8, paddingLeft: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {session?.user?.email}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="btn"
+            style={{ width: '100%', background: 'rgba(255,255,255,0.08)', color: '#94a3b8', justifyContent: 'center' }}
+          >
+            🚪 Sign Out
+          </button>
+        </div>
       </aside>
 
       <main className="main-content">
