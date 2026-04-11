@@ -31,18 +31,29 @@ export default function Dashboard() {
       supabase.from('appointments').select('price').gte('date', monthStart).lte('date', monthEnd).eq('status', 'scheduled'),
       supabase.from('expenses').select('amount').gte('date', monthStart).lte('date', monthEnd),
       supabase.from('appointments')
-        .select('id, date, time, status, price, customers(name), service:service_id(name)')
-        .order('date', { ascending: false })
-        .order('time', { ascending: false })
-        .limit(8)
+        .select('id, date, time, status, price, customers(name), service:service_id(name), service2:service2_id(name)')
     ])
 
     const revenue = completedApts?.reduce((s, a) => s + (Number(a.price) || 0), 0) || 0
     const projected = scheduledApts?.reduce((s, a) => s + (Number(a.price) || 0), 0) || 0
     const expenses = monthExp?.reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0
 
+    // Sort: upcoming (date >= today) ascending first, then past descending
+    const sorted = [...(recentApts || [])].sort((a, b) => {
+      const aUp = a.date >= today
+      const bUp = b.date >= today
+      if (aUp && !bUp) return -1
+      if (!aUp && bUp) return 1
+      if (aUp) {
+        if (a.date !== b.date) return a.date.localeCompare(b.date)
+        return (a.time || '').localeCompare(b.time || '')
+      }
+      if (a.date !== b.date) return b.date.localeCompare(a.date)
+      return (b.time || '').localeCompare(a.time || '')
+    })
+
     setStats({ customers: customers || 0, todayApts: todayApts?.length || 0, revenue, projected, expenses })
-    setRecent(recentApts || [])
+    setRecent(sorted)
     setLoading(false)
   }
 
@@ -152,14 +163,15 @@ export default function Dashboard() {
 
       <div className="card">
         <div className="card-header">
-          <h3>Recent Appointments</h3>
+          <h3>All Appointments</h3>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Upcoming first, then past</span>
         </div>
         <div className="table-container">
           <table>
             <thead>
               <tr>
                 <th>Customer</th>
-                <th className="hide-mobile">Service</th>
+                <th className="hide-mobile">Service(s)</th>
                 <th>Date</th>
                 <th className="hide-mobile">Time</th>
                 <th>Status</th>
@@ -171,9 +183,11 @@ export default function Dashboard() {
               {recent.length === 0 ? (
                 <tr><td colSpan={7}><div className="empty-state"><div className="empty-icon">📅</div><p>No appointments yet</p></div></td></tr>
               ) : recent.map(apt => (
-                <tr key={apt.id}>
+                <tr key={apt.id} style={apt.date === today ? { background: '#fff8fd' } : undefined}>
                   <td>{apt.customers?.name || '—'}</td>
-                  <td className="hide-mobile">{apt.service?.name || '—'}</td>
+                  <td className="hide-mobile">
+                    {[apt.service?.name, apt.service2?.name].filter(Boolean).join(' + ') || '—'}
+                  </td>
                   <td>{apt.date}</td>
                   <td className="hide-mobile">{apt.time?.slice(0, 5)}</td>
                   <td>{statusBadge(apt.status)}</td>
