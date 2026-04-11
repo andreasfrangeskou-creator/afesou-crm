@@ -109,6 +109,9 @@ export default function Dashboard() {
           <div className="stat-label">Realized Revenue</div>
           <div className="stat-value" style={{ color: 'var(--success)' }}>€{stats.revenue.toFixed(2)}</div>
           <div className="stat-sub">Completed appointments</div>
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-muted)' }}>
+            Commission ({commissionRate}%): <strong style={{ color: 'var(--warning)' }}>€{commission.toFixed(2)}</strong>
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon">🔮</div>
