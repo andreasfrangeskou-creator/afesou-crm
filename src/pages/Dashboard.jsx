@@ -56,6 +56,9 @@ export default function Dashboard() {
 
   const commission = stats.revenue * commissionRate / 100
   const netProfit = stats.revenue - commission - stats.expenses
+  const projectedRevenue = stats.revenue + stats.projected
+  const projectedCommission = projectedRevenue * commissionRate / 100
+  const projectedNet = projectedRevenue - projectedCommission - stats.expenses
 
   const statusBadge = (s) => {
     if (s === 'completed') return <span className="badge badge-success">Completed</span>
@@ -119,19 +122,33 @@ export default function Dashboard() {
       </div>
 
       {/* Projected breakdown */}
-      <div className="card" style={{ marginBottom: 24, padding: '14px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{monthLabel} forecast:</span>
-            {' '}If all scheduled appointments complete →{' '}
-            <strong style={{ color: '#6366f1' }}>€{(stats.revenue + stats.projected).toFixed(2)}</strong> total revenue
+      {stats.projected > 0 && (
+        <div className="card" style={{ marginBottom: 24, padding: '14px 20px', background: '#f5f3ff', border: '1px solid #ddd6fe' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#5b21b6', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {monthLabel} forecast — if all scheduled appointments complete
           </div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            Commission ({commissionRate}%): <strong style={{ color: 'var(--warning)' }}>€{commission.toFixed(2)}</strong>
-            {' '}· Net after commission: <strong style={{ color: 'var(--success)' }}>€{(stats.revenue - commission).toFixed(2)}</strong>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 13 }}>
+            <div>
+              <span style={{ color: 'var(--text-muted)' }}>Total Revenue: </span>
+              <strong style={{ color: '#6366f1' }}>€{projectedRevenue.toFixed(2)}</strong>
+            </div>
+            <div>
+              <span style={{ color: 'var(--text-muted)' }}>Commission ({commissionRate}%): </span>
+              <strong style={{ color: 'var(--warning)' }}>€{projectedCommission.toFixed(2)}</strong>
+            </div>
+            <div>
+              <span style={{ color: 'var(--text-muted)' }}>Expenses: </span>
+              <strong style={{ color: 'var(--danger)' }}>€{stats.expenses.toFixed(2)}</strong>
+            </div>
+            <div>
+              <span style={{ color: 'var(--text-muted)' }}>Projected Net: </span>
+              <strong style={{ color: projectedNet >= 0 ? 'var(--success)' : 'var(--danger)', fontSize: 15 }}>
+                €{projectedNet.toFixed(2)}
+              </strong>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="card">
         <div className="card-header">
