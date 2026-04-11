@@ -7,6 +7,7 @@ export default function Reports() {
   const commissionRate = Number(localStorage.getItem(RATE_KEY) || 20)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState('summary')
   const [filterMonth, setFilterMonth] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -27,11 +28,14 @@ export default function Reports() {
       { data: newCustomers }
     ] = await Promise.all([
       supabase.from('appointments')
-        .select('id, date, price, status, service:service_id(name)')
-        .gte('date', start).lte('date', end),
+        .select('id, date, price, status, customers(name), service:service_id(name), service2:service2_id(name)')
+        .gte('date', start).lte('date', end)
+        .order('date', { ascending: true })
+        .order('time', { ascending: true }),
       supabase.from('expenses')
-        .select('id, amount, category')
-        .gte('date', start).lte('date', end),
+        .select('id, amount, category, date, description')
+        .gte('date', start).lte('date', end)
+        .order('date', { ascending: false }),
       supabase.from('customers')
         .select('id')
         .gte('created_at', start + 'T00:00:00')
@@ -40,24 +44,36 @@ export default function Reports() {
 
     const completed = (appointments || []).filter(a => a.status === 'completed')
     const cancelled = (appointments || []).filter(a => a.status === 'cancelled')
+    const scheduled = (appointments || []).filter(a => a.status === 'scheduled')
 
     const revenue = completed.reduce((s, a) => s + Number(a.price || 0), 0)
     const totalExpenses = (expenses || []).reduce((s, e) => s + Number(e.amount || 0), 0)
     const commissionOwed = revenue * commissionRate / 100
     const netProfit = revenue - totalExpenses - commissionOwed
 
-    // Top services
+    // Top services — count BOTH service1 and service2
     const serviceMap = {}
     completed.forEach(a => {
-      const name = a.service?.name || 'Unknown'
-      if (!serviceMap[name]) serviceMap[name] = { count: 0, revenue: 0 }
-      serviceMap[name].count++
-      serviceMap[name].revenue += Number(a.price || 0)
+      const s1 = a.service?.name
+      const s2 = a.service2?.name
+      const numServices = [s1, s2].filter(Boolean).length
+      const priceEach = Number(a.price || 0) / (numServices || 1)
+
+      if (s1) {
+        if (!serviceMap[s1]) serviceMap[s1] = { count: 0, revenue: 0 }
+        serviceMap[s1].count++
+        serviceMap[s1].revenue += priceEach
+      }
+      if (s2) {
+        if (!serviceMap[s2]) serviceMap[s2] = { count: 0, revenue: 0 }
+        serviceMap[s2].count++
+        serviceMap[s2].revenue += priceEach
+      }
     })
     const topServices = Object.entries(serviceMap)
       .map(([name, d]) => ({ name, ...d }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 8)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
 
     // Expenses by category
     const expCatMap = {}
@@ -71,8 +87,11 @@ export default function Reports() {
       totalApts: (appointments || []).length,
       completedApts: completed.length,
       cancelledApts: cancelled.length,
+      scheduledApts: scheduled,
       newCustomers: newCustomers?.length || 0,
-      topServices, expCatMap
+      topServices, expCatMap,
+      expenses: expenses || [],
+      completed
     })
     setLoading(false)
   }
@@ -80,8 +99,14 @@ export default function Reports() {
   const monthLabel = new Date(Number(filterMonth.split('-')[0]), Number(filterMonth.split('-')[1]) - 1)
     .toLocaleString('default', { month: 'long', year: 'numeric' })
 
-  const maxSvcRev = data?.topServices?.[0]?.revenue || 1
+  const maxSvcCount = data?.topServices?.[0]?.count || 1
   const maxExpCat = data?.expCatMap ? Math.max(...Object.values(data.expCatMap), 1) : 1
+
+  const statusBadge = (s) => {
+    if (s === 'completed') return <span className="badge badge-success">Completed</span>
+    if (s === 'cancelled') return <span className="badge badge-danger">Cancelled</span>
+    return <span className="badge badge-info">Scheduled</span>
+  }
 
   return (
     <div>
@@ -98,91 +123,220 @@ export default function Reports() {
         />
       </div>
 
+      <div className="tabs">
+        {[
+          { key: 'summary', label: 'Summary' },
+          { key: 'services', label: 'Services' },
+          { key: 'expenses', label: 'Expenses' },
+          { key: 'scheduled', label: `Upcoming${data ? ` (${data.scheduledApts.length})` : ''}` },
+        ].map(t => (
+          <button
+            key={t.key}
+            className={`tab-btn${tab === t.key ? ' active' : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div style={{ padding: 40, color: 'var(--text-muted)' }}>Loading...</div>
       ) : (
         <>
-          {/* Financial Summary */}
-          <div className="stats-grid" style={{ marginBottom: 24 }}>
-            <div className="stat-card">
-              <div className="stat-icon">💶</div>
-              <div className="stat-label">Revenue</div>
-              <div className="stat-value" style={{ color: 'var(--success)' }}>€{data.revenue.toFixed(2)}</div>
-              <div className="stat-sub">{data.completedApts} completed apts</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">🏠</div>
-              <div className="stat-label">To Establishment ({commissionRate}%)</div>
-              <div className="stat-value" style={{ color: 'var(--warning)' }}>€{data.commissionOwed.toFixed(2)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">💸</div>
-              <div className="stat-label">Expenses</div>
-              <div className="stat-value" style={{ color: 'var(--danger)' }}>€{data.totalExpenses.toFixed(2)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">{data.netProfit >= 0 ? '📈' : '📉'}</div>
-              <div className="stat-label">Net Profit</div>
-              <div className="stat-value" style={{ color: data.netProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                €{data.netProfit.toFixed(2)}
+          {/* SUMMARY TAB */}
+          {tab === 'summary' && (
+            <>
+              <div className="stats-grid" style={{ marginBottom: 24 }}>
+                <div className="stat-card">
+                  <div className="stat-icon">💶</div>
+                  <div className="stat-label">Revenue</div>
+                  <div className="stat-value" style={{ color: 'var(--success)' }}>€{data.revenue.toFixed(2)}</div>
+                  <div className="stat-sub">{data.completedApts} completed apts</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">🏠</div>
+                  <div className="stat-label">To Establishment ({commissionRate}%)</div>
+                  <div className="stat-value" style={{ color: 'var(--warning)' }}>€{data.commissionOwed.toFixed(2)}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">💸</div>
+                  <div className="stat-label">Expenses</div>
+                  <div className="stat-value" style={{ color: 'var(--danger)' }}>€{data.totalExpenses.toFixed(2)}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">{data.netProfit >= 0 ? '📈' : '📉'}</div>
+                  <div className="stat-label">Net Profit</div>
+                  <div className="stat-value" style={{ color: data.netProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                    €{data.netProfit.toFixed(2)}
+                  </div>
+                  <div className="stat-sub">After commission & expenses</div>
+                </div>
               </div>
-              <div className="stat-sub">After commission & expenses</div>
-            </div>
-          </div>
 
-          {/* Appointment Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-            <div className="stat-card">
-              <div className="stat-label">Total Appointments</div>
-              <div className="stat-value">{data.totalApts}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Completed</div>
-              <div className="stat-value" style={{ color: 'var(--success)' }}>{data.completedApts}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Cancelled</div>
-              <div className="stat-value" style={{ color: 'var(--danger)' }}>{data.cancelledApts}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">New Customers</div>
-              <div className="stat-value" style={{ color: 'var(--primary)' }}>{data.newCustomers}</div>
-            </div>
-          </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+                <div className="stat-card">
+                  <div className="stat-label">Total Appointments</div>
+                  <div className="stat-value">{data.totalApts}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">Completed</div>
+                  <div className="stat-value" style={{ color: 'var(--success)' }}>{data.completedApts}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">Cancelled</div>
+                  <div className="stat-value" style={{ color: 'var(--danger)' }}>{data.cancelledApts}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">New Customers</div>
+                  <div className="stat-value" style={{ color: 'var(--primary)' }}>{data.newCustomers}</div>
+                </div>
+              </div>
 
-          <div className="two-col">
-            {/* Top Services */}
+              {/* Completed appointments list */}
+              <div className="card">
+                <div className="card-header"><h3>Completed Appointments</h3></div>
+                {data.completed.length === 0 ? (
+                  <div className="empty-state"><div className="empty-icon">✅</div><p>No completed appointments this month</p></div>
+                ) : (
+                  <div className="table-container">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Customer</th>
+                          <th className="hide-mobile">Service(s)</th>
+                          <th>Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.completed.map(a => (
+                          <tr key={a.id}>
+                            <td>{a.date}</td>
+                            <td>{a.customers?.name || '—'}</td>
+                            <td className="hide-mobile">
+                              {[a.service?.name, a.service2?.name].filter(Boolean).join(' + ') || '—'}
+                            </td>
+                            <td>€{Number(a.price || 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* SERVICES TAB */}
+          {tab === 'services' && (
             <div className="card">
-              <div className="card-header"><h3>Top Services by Revenue</h3></div>
+              <div className="card-header">
+                <h3>Top Services</h3>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>By number of sessions (both service slots counted)</span>
+              </div>
               {data.topServices.length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">✂️</div><p>No completed appointments</p></div>
+                <div className="empty-state"><div className="empty-icon">✂️</div><p>No completed appointments this month</p></div>
               ) : data.topServices.map(s => (
                 <div key={s.name} className="report-bar-row">
                   <span className="report-bar-label">{s.name}</span>
                   <div className="report-bar-track">
-                    <div className="report-bar-fill" style={{ width: `${(s.revenue / maxSvcRev) * 100}%` }} />
+                    <div className="report-bar-fill" style={{ width: `${(s.count / maxSvcCount) * 100}%` }} />
                   </div>
-                  <span className="report-bar-value">€{s.revenue.toFixed(0)}</span>
+                  <span className="report-bar-value" style={{ minWidth: 90, textAlign: 'right' }}>
+                    {s.count}x · €{s.revenue.toFixed(0)}
+                  </span>
                 </div>
               ))}
             </div>
+          )}
 
-            {/* Expenses by Category */}
-            <div className="card">
-              <div className="card-header"><h3>Expenses by Category</h3></div>
-              {Object.keys(data.expCatMap).length === 0 ? (
-                <div className="empty-state"><div className="empty-icon">💸</div><p>No expenses this month</p></div>
-              ) : Object.entries(data.expCatMap).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
-                <div key={cat} className="report-bar-row">
-                  <span className="report-bar-label">{cat}</span>
-                  <div className="report-bar-track">
-                    <div className="report-bar-fill" style={{ width: `${(amt / maxExpCat) * 100}%`, background: 'var(--danger)' }} />
+          {/* EXPENSES TAB */}
+          {tab === 'expenses' && (
+            <div className="two-col">
+              <div className="card">
+                <div className="card-header"><h3>Expenses by Category</h3></div>
+                {Object.keys(data.expCatMap).length === 0 ? (
+                  <div className="empty-state"><div className="empty-icon">💸</div><p>No expenses this month</p></div>
+                ) : Object.entries(data.expCatMap).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
+                  <div key={cat} className="report-bar-row">
+                    <span className="report-bar-label">{cat}</span>
+                    <div className="report-bar-track">
+                      <div className="report-bar-fill" style={{ width: `${(amt / maxExpCat) * 100}%`, background: 'var(--danger)' }} />
+                    </div>
+                    <span className="report-bar-value">€{amt.toFixed(0)}</span>
                   </div>
-                  <span className="report-bar-value">€{amt.toFixed(0)}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              <div className="card">
+                <div className="card-header"><h3>All Expenses</h3></div>
+                {data.expenses.length === 0 ? (
+                  <div className="empty-state"><div className="empty-icon">💸</div><p>No expenses this month</p></div>
+                ) : (
+                  <div className="table-container">
+                    <table>
+                      <thead>
+                        <tr><th>Date</th><th>Category</th><th className="hide-mobile">Description</th><th>Amount</th></tr>
+                      </thead>
+                      <tbody>
+                        {data.expenses.map(e => (
+                          <tr key={e.id}>
+                            <td>{e.date}</td>
+                            <td>{e.category}</td>
+                            <td className="hide-mobile">{e.description || '—'}</td>
+                            <td style={{ color: 'var(--danger)' }}>€{Number(e.amount).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* SCHEDULED TAB */}
+          {tab === 'scheduled' && (
+            <div className="card">
+              <div className="card-header">
+                <h3>Upcoming Appointments</h3>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  Projected: €{data.scheduledApts.reduce((s, a) => s + Number(a.price || 0), 0).toFixed(2)}
+                </span>
+              </div>
+              {data.scheduledApts.length === 0 ? (
+                <div className="empty-state"><div className="empty-icon">🔮</div><p>No upcoming appointments this month</p></div>
+              ) : (
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th className="hide-mobile">Service(s)</th>
+                        <th>Status</th>
+                        <th>Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.scheduledApts.map(a => (
+                        <tr key={a.id}>
+                          <td>{a.date}</td>
+                          <td>{a.customers?.name || '—'}</td>
+                          <td className="hide-mobile">
+                            {[a.service?.name, a.service2?.name].filter(Boolean).join(' + ') || '—'}
+                          </td>
+                          <td>{statusBadge(a.status)}</td>
+                          <td>€{Number(a.price || 0).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

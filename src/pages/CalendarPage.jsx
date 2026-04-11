@@ -257,15 +257,21 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Day view modal */}
+      {/* Day view — full screen excluding sidebar */}
       {modal === 'day' && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ marginBottom: 0 }}>
+        <div className="modal-overlay-fullscreen" onClick={() => setModal(null)}>
+          <div className="modal-day" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2>
                 {selectedDay} {new Date(year, month).toLocaleString('default', { month: 'long' })} {year}
+                <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 12 }}>
+                  {dayApts.length} appointment{dayApts.length !== 1 ? 's' : ''}
+                </span>
               </h2>
-              <button className="btn btn-primary btn-sm" onClick={() => openAdd(selectedDay)}>+ Add</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary btn-sm" onClick={() => openAdd(selectedDay)}>+ Add</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setModal(null)}>✕ Close</button>
+              </div>
             </div>
             {dayApts.length === 0 ? (
               <div className="empty-state"><div className="empty-icon">📅</div><p>No appointments this day</p></div>
@@ -301,9 +307,6 @@ export default function CalendarPage() {
                 </table>
               </div>
             )}
-            <div className="form-actions">
-              <button className="btn btn-secondary" onClick={() => setModal(null)}>Close</button>
-            </div>
           </div>
         </div>
       )}

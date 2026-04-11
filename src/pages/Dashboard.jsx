@@ -5,7 +5,7 @@ const RATE_KEY = 'afesou_commission_rate'
 
 export default function Dashboard() {
   const commissionRate = Number(localStorage.getItem(RATE_KEY) || 20)
-  const [stats, setStats] = useState({ customers: 0, todayApts: 0, revenue: 0, expenses: 0 })
+  const [stats, setStats] = useState({ customers: 0, todayApts: 0, revenue: 0, projected: 0, expenses: 0 })
   const [recent, setRecent] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -20,13 +20,15 @@ export default function Dashboard() {
     const [
       { count: customers },
       { data: todayApts },
-      { data: monthApts },
+      { data: completedApts },
+      { data: scheduledApts },
       { data: monthExp },
       { data: recentApts }
     ] = await Promise.all([
       supabase.from('customers').select('*', { count: 'exact', head: true }),
       supabase.from('appointments').select('id').eq('date', today),
       supabase.from('appointments').select('price').gte('date', monthStart).lte('date', monthEnd).eq('status', 'completed'),
+      supabase.from('appointments').select('price').gte('date', monthStart).lte('date', monthEnd).eq('status', 'scheduled'),
       supabase.from('expenses').select('amount').gte('date', monthStart).lte('date', monthEnd),
       supabase.from('appointments')
         .select('id, date, time, status, price, customers(name), service:service_id(name)')
@@ -35,10 +37,11 @@ export default function Dashboard() {
         .limit(8)
     ])
 
-    const revenue = monthApts?.reduce((s, a) => s + (Number(a.price) || 0), 0) || 0
+    const revenue = completedApts?.reduce((s, a) => s + (Number(a.price) || 0), 0) || 0
+    const projected = scheduledApts?.reduce((s, a) => s + (Number(a.price) || 0), 0) || 0
     const expenses = monthExp?.reduce((s, e) => s + (Number(e.amount) || 0), 0) || 0
 
-    setStats({ customers: customers || 0, todayApts: todayApts?.length || 0, revenue, expenses })
+    setStats({ customers: customers || 0, todayApts: todayApts?.length || 0, revenue, projected, expenses })
     setRecent(recentApts || [])
     setLoading(false)
   }
@@ -86,18 +89,18 @@ export default function Dashboard() {
       </div>
 
       {/* Row 2: financials */}
-      <div className="stats-grid" style={{ marginBottom: 24 }}>
+      <div className="stats-grid" style={{ marginBottom: 16 }}>
         <div className="stat-card">
-          <div className="stat-icon">💶</div>
-          <div className="stat-label">Revenue</div>
+          <div className="stat-icon">✅</div>
+          <div className="stat-label">Realized Revenue</div>
           <div className="stat-value" style={{ color: 'var(--success)' }}>€{stats.revenue.toFixed(2)}</div>
-          <div className="stat-sub">{monthLabel}</div>
+          <div className="stat-sub">Completed appointments</div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">🏠</div>
-          <div className="stat-label">Commission ({commissionRate}%)</div>
-          <div className="stat-value" style={{ color: 'var(--warning)' }}>€{commission.toFixed(2)}</div>
-          <div className="stat-sub">To establishment</div>
+          <div className="stat-icon">🔮</div>
+          <div className="stat-label">Projected Income</div>
+          <div className="stat-value" style={{ color: '#6366f1' }}>€{stats.projected.toFixed(2)}</div>
+          <div className="stat-sub">Scheduled this month</div>
         </div>
         <div className="stat-card">
           <div className="stat-icon">💸</div>
@@ -112,6 +115,21 @@ export default function Dashboard() {
             €{netProfit.toFixed(2)}
           </div>
           <div className="stat-sub">After commission & expenses</div>
+        </div>
+      </div>
+
+      {/* Projected breakdown */}
+      <div className="card" style={{ marginBottom: 24, padding: '14px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            <span style={{ fontWeight: 600, color: 'var(--text)' }}>{monthLabel} forecast:</span>
+            {' '}If all scheduled appointments complete →{' '}
+            <strong style={{ color: '#6366f1' }}>€{(stats.revenue + stats.projected).toFixed(2)}</strong> total revenue
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            Commission ({commissionRate}%): <strong style={{ color: 'var(--warning)' }}>€{commission.toFixed(2)}</strong>
+            {' '}· Net after commission: <strong style={{ color: 'var(--success)' }}>€{(stats.revenue - commission).toFixed(2)}</strong>
+          </div>
         </div>
       </div>
 
